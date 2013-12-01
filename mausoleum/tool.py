@@ -35,24 +35,48 @@ def scan_directory(repo, slab_repo, directory):
     repo.mark_seen(confirmed - set(updated))
     repo.mark_updated(updated)
 
-def main():
-    logging.basicConfig(level=logging.INFO)
-    parser = ArgumentParser(description='Mausoleum archival tool')
-    parser.add_argument('--config', help='Config file', default='config.json')
-    args = parser.parse_args()
-    with open(args.config) as f:
-        config = json.load(f)
-
+def make_seg_repository(config):
     seg_repository_con = connect(db=config['database'], charset='utf8')
     with open(config['key']) as f:
         pk = RSA.importKey(f.read())
-    seg_repository = SegmentRepository(seg_repository_con, config['salt'], pk, config['stage'])
+    return SegmentRepository(seg_repository_con, config['salt'], pk, config['stage'])
+
+def operation_scan(config, _):
+    seg_repository = make_seg_repository(config)
 
     repository_con = connect(db=config['database'], charset='utf8')
     for domain, directory in config['directories'].iteritems():
         repository = Repository(repository_con, domain)
         scan_directory(repository, seg_repository, directory)
         repository_con.commit()
+
+def operation_ls(config, args):
+    repository_con = connect(db=config['database'], charset='utf8')
+    max_domain = max(map(len, config['directories']))
+    for domain in config['directories']:
+        repository = Repository(repository_con, domain)
+        files = getattr(repository, 'deleted_files' if args.deleted else 'active_files')()
+        max_len = max(map(len, files))
+        for fn in sorted(files):
+            ts, size = files[fn]
+            print '%-*s %-*s %d %d' % (max_domain, domain, max_len, fn, ts or 0, size or 0)
+
+def main():
+    logging.basicConfig(level=logging.INFO)
+    parser = ArgumentParser(description='Mausoleum archival tool')
+    operations = {
+        'scan': operation_scan,
+        'ls': operation_ls
+    }
+    parser.add_argument('operation', default='scan', choices=operations.keys())
+    parser.add_argument('--config', help='Config file', default='config.json')
+    parser.add_argument('--deleted', help='Show deleted files (ls)', default=False, action='store_true')
+    args = parser.parse_args()
+    with open(args.config) as f:
+        config = json.load(f)
+
+    operations[args.operation](config, args)
+
 
 if __name__ == '__main__':
     main()

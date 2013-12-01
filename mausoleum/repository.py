@@ -15,6 +15,11 @@ class Repository(object):
         c.execute('SELECT path, updated, size FROM file WHERE domain=%s AND state=%s', (self._domain, 'active',))
         return {path: (timestamp, size) for path, timestamp, size in c}
 
+    def deleted_files(self):
+        c = self._con.cursor()
+        c.execute('SELECT path, seen FROM file WHERE domain=%s AND state=%s', (self._domain, 'deleted',))
+        return {path: (timestamp, 0) for path, timestamp in c}
+
     def mark_deleted(self, names):
         c = self._con.cursor()
         t = int(time())
