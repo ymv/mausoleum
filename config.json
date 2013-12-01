@@ -1,0 +1,9 @@
+{
+	"database": "mausoleum",
+	"stage": "./stage",
+	"key": "./key",
+	"salt": "",
+	"directories": {
+		"Bucket": "/home/me/Pictures/BUCKET/"
+	}
+}
