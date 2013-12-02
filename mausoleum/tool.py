@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 from os import stat, walk
 from os.path import join, relpath
+from sys import stderr, exit
 import json
 import logging
 from magic import Magic
@@ -71,14 +72,26 @@ def main():
     parser.add_argument('--config', help='Config file', default='config.json')
     parser.add_argument('--deleted', help='Show deleted files (ls)', default=False, action='store_true')
     parser.add_argument('--verbose', help='Verbose logging', default=False, action='store_true')
+    parser.add_argument('--add-dir', help='Add directory', nargs='*', dest='add_dir')
     args = parser.parse_args()
 
     logging.basicConfig(level=(logging.INFO if args.verbose else logging.WARNING))
     with open(args.config) as f:
         config = json.load(f)
 
+    if args.add_dir:
+        if len(args.add_dir) % 2:
+            stderr.write('Bad --add-dir argument count\n')
+            exit(1)
+        config['directories'].update(chunk(args.add_dir))
+            
     operations[args.operation](config, args)
 
+def chunk(xs):
+    i = iter(xs)
+    for x in i:
+        b = x
+        yield (x, i.next())
 
 if __name__ == '__main__':
     main()
