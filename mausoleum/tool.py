@@ -62,7 +62,6 @@ def operation_ls(config, args):
             print '%-*s %-*s %d %d' % (max_domain, domain, max_len, fn, ts or 0, size or 0)
 
 def main():
-    logging.basicConfig(level=logging.INFO)
     parser = ArgumentParser(description='Mausoleum archival tool')
     operations = {
         'scan': operation_scan,
@@ -71,7 +70,10 @@ def main():
     parser.add_argument('operation', default='scan', choices=operations.keys())
     parser.add_argument('--config', help='Config file', default='config.json')
     parser.add_argument('--deleted', help='Show deleted files (ls)', default=False, action='store_true')
+    parser.add_argument('--verbose', help='Verbose logging', default=False, action='store_true')
     args = parser.parse_args()
+
+    logging.basicConfig(level=(logging.INFO if args.verbose else logging.WARNING))
     with open(args.config) as f:
         config = json.load(f)
 
