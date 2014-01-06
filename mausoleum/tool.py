@@ -60,7 +60,7 @@ def operation_ls(config, args):
         max_len = max(map(len, files))
         for fn in sorted(files):
             ts, size = files[fn]
-            print '%-*s %-*s %d %d' % (max_domain, domain, max_len, fn, ts or 0, size or 0)
+            print (u'%-*s %-*s %d %d' % (max_domain, domain, max_len, fn, ts or 0, size or 0)).encode('utf-8')
 
 def main():
     parser = ArgumentParser(description='Mausoleum archival tool')
