@@ -9,6 +9,7 @@ from MySQLdb import connect
 from Crypto.PublicKey import RSA
 from mausoleum.repository import Repository
 from mausoleum.segment_repository import SegmentRepository
+from mausoleum.stat import Timer
 
 def scan_directory(repo, slab_repo, directory):
     m = Magic(True)
@@ -86,6 +87,7 @@ def main():
         config['directories'].update(chunk(args.add_dir))
             
     operations[args.operation](config, args)
+    Timer.report()
 
 def chunk(xs):
     i = iter(xs)
