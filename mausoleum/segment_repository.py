@@ -28,7 +28,7 @@ class SegmentRepository(object):
         if self._use_cache:
             c = self._con.cursor()
             c.execute('SELECT hash FROM slab_segment')
-            self._cache = set(c)
+            self._cache = set(x for x, in c)
 
     def open_slab(self):
         self._timer.start('open_slab')
@@ -80,23 +80,24 @@ class SegmentRepository(object):
 
     def write_segment(self, hash, data):
         self._timer.start('write_segment')
+        digest = hash.hexdigest()
         offset = self._slab.tell()
-        self._logger.debug('Writing segment data %s, %d bytes @ %d', hash.hexdigest(), len(data), offset)
+        self._logger.debug('Writing segment data %s, %d bytes @ %d', digest, len(data), offset)
         self.write_encrypted_segment(hash, data)
         self._slab.flush()
 
         c = self._con.cursor()
-        c.execute('INSERT INTO slab_segment (slab, offset, hash) VALUES (%s, %s, %s)', (self._slab_name, offset, hash.hexdigest()))
+        c.execute('INSERT INTO slab_segment (slab, offset, hash) VALUES (%s, %s, %s)', (self._slab_name, offset, digest))
         self._con.commit()
         if self._use_cache:
-            self._cache.add(hash)
+            self._cache.add(digest)
         self._timer.end('write_segment')
 
     def segment_exists(self, hash):
         self._timer.start('segment_exists')
         if self._use_cache:
             self._timer.end('segment_exists')
-            return hash in self._cache
+            return hash.hexdigest() in self._cache
         c = self._con.cursor()
         c.execute('SELECT 1 FROM slab_segment WHERE hash = %s LIMIT 1', (hash.hexdigest(),))
         self._timer.end('segment_exists')
