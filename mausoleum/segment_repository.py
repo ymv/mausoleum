@@ -13,7 +13,7 @@ def random_string(l):
         return f.read(l)
 
 class SegmentRepository(object):
-    def __init__(self, connection, salt, pk, stage):
+    def __init__(self, connection, salt, pk, stage, use_cache=True):
         self._con = connection
         self._stage = stage
         self._salt = salt
@@ -24,6 +24,11 @@ class SegmentRepository(object):
         self._logger = logging.getLogger('SegmentRepository')
         self._logger.info('Salt: %s, pk: %s, stage: %s', salt, pk, stage)
         self._timer = Timer.getTimer('SegmentRepository')
+        self._use_cache = use_cache
+        if self._use_cache:
+            c = self._con.cursor()
+            c.execute('SELECT hash FROM slab_segment')
+            self._cache = set(c)
 
     def open_slab(self):
         self._timer.start('open_slab')
@@ -83,10 +88,15 @@ class SegmentRepository(object):
         c = self._con.cursor()
         c.execute('INSERT INTO slab_segment (slab, offset, hash) VALUES (%s, %s, %s)', (self._slab_name, offset, hash.hexdigest()))
         self._con.commit()
+        if self._use_cache:
+            self._cache.add(hash)
         self._timer.end('write_segment')
 
     def segment_exists(self, hash):
         self._timer.start('segment_exists')
+        if self._use_cache:
+            self._timer.end('segment_exists')
+            return hash in self._cache
         c = self._con.cursor()
         c.execute('SELECT 1 FROM slab_segment WHERE hash = %s LIMIT 1', (hash.hexdigest(),))
         self._timer.end('segment_exists')

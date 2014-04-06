@@ -25,4 +25,4 @@ class Timer(object):
         logger = logging.getLogger('Timer')
         for name, timer in cls._all_timers.iteritems():
             for k, (total, n) in timer._timers.iteritems():
-                logger.info('%s %s %d %.4f %.4f', name, k, n, total, total/n)
+                logger.warn('%s %s %d %.4f %.4f', name, k, n, total, total/n)
