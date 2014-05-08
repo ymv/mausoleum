@@ -5,11 +5,14 @@ from sys import stderr, exit
 import json
 import logging
 from magic import Magic
+from zlib import compress
 from MySQLdb import connect
 from Crypto.PublicKey import RSA
 from mausoleum.repository import Repository
 from mausoleum.segment_repository import SegmentRepository
 from mausoleum.stat import Timer
+from mausoleum.slab import SlabFile
+from hashlib import md5
 
 def scan_directory(repo, slab_repo, directory):
     m = Magic(True)
@@ -63,17 +66,49 @@ def operation_ls(config, args):
             ts, size = files[fn]
             print (u'%-*s %-*s %d %d' % (max_domain, domain, max_len, fn, ts or 0, size or 0)).encode('utf-8')
 
+def operation_index(config, args):
+    with open(config['key']) as f:
+        pk = RSA.importKey(f.read())
+    total = total_cmp = 0
+    for slab in args.slabs:
+        print 'SLAB', slab
+        with open(slab, 'r') as rf:
+            f = SlabFile(rf, pk)
+            while True:
+                pos = f.tell()
+                x = f.read()
+                if x is None:
+                    print 'SLAB-END'
+                    break
+                hash, data = x
+                print 'SEGMENT', pos, ''.join('%02x' % ord(c) for c in hash), len(data)
+                if args.validate:
+                    actual_hash = md5(data).digest()
+                    print '  VALIDATION:', 'OK' if hash == actual_hash else 'FAIL'
+                if args.appraise:
+                    compressed_l = len(compress(data))
+                    print '  COMPRESS: %d (%.2f%%)' % (compressed_l, 100.0*compressed_l/len(data))
+                    total += len(data)
+                    total_cmp += compressed_l
+
+    if args.appraise:
+        print 'TOTAL COMPRESS: %d (%.2f%%)' % (total-total_cmp, 100.0*total_cmp/total)
+
 def main():
     parser = ArgumentParser(description='Mausoleum archival tool')
     operations = {
         'scan': operation_scan,
-        'ls': operation_ls
+        'ls': operation_ls,
+        'index': operation_index
     }
     parser.add_argument('operation', default='scan', choices=operations.keys())
     parser.add_argument('--config', help='Config file', default='config.json')
     parser.add_argument('--deleted', help='Show deleted files (ls)', default=False, action='store_true')
     parser.add_argument('--verbose', help='Verbose logging', default=False, action='store_true')
     parser.add_argument('--add-dir', help='Add directory', nargs='*', dest='add_dir')
+    parser.add_argument('slabs', help='Slabs (index)', nargs='*')
+    parser.add_argument('--validate', help='Validate segments (index)', default=False, action='store_true')
+    parser.add_argument('--appraise', help='Appraise segment compression (index)', default=False, action='store_true')
     args = parser.parse_args()
 
     logging.basicConfig(level=(logging.INFO if args.verbose else logging.WARNING))
