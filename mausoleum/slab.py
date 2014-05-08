@@ -55,5 +55,5 @@ class SlabFile(object):
         padded = AES.new(key, mode=AES.MODE_CBC, IV=iv).decrypt(encrypted_payload)
         payload = padded[:-ord(padded[-1])]
 
-        return hash, payload
+        return hash, payload, segment_encoding
 

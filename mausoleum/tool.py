@@ -80,8 +80,8 @@ def operation_index(config, args):
                 if x is None:
                     print 'SLAB-END'
                     break
-                hash, data = x
-                print 'SEGMENT', pos, ''.join('%02x' % ord(c) for c in hash), len(data)
+                hash, data, format = x
+                print 'SEGMENT', pos, ''.join('%02x' % ord(c) for c in hash), len(data), format
                 if args.validate:
                     actual_hash = md5(data).digest()
                     print '  VALIDATION:', 'OK' if hash == actual_hash else 'FAIL'
