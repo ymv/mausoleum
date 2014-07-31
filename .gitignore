@@ -1,2 +1,5 @@
 *.pyc
 *.egg-info
+stage
+scrap
+ve
