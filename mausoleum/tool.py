@@ -72,10 +72,16 @@ def operation_index(config, args):
     with open(config['key']) as f:
         pk = RSA.importKey(f.read())
     total = total_cmp = 0
+    if args.updatedb:
+        repository_con = connect(db=config['database'], charset='utf8')
+        c = repository_con.cursor()
     for slab in args.slabs:
         print 'SLAB', slab
         with open(slab, 'r') as rf:
+            slab_name = slab.split('/')[-1]
             f = SlabFile(rf, pk)
+            if args.updatedb:
+                c.execute('DELETE FROM slab_segment WHERE slab=%s', (slab_name,))
             while True:
                 pos = f.tell()
                 x = f.read()
@@ -83,10 +89,13 @@ def operation_index(config, args):
                     print 'SLAB-END'
                     break
                 hash, data, format = x
-                print 'SEGMENT', pos, ''.join('%02x' % ord(c) for c in hash), len(data), format
+                hash_hex = ''.join('%02x' % ord(c) for c in hash)
+                print 'SEGMENT', pos, hash_hex, len(data), format
                 if args.validate:
                     actual_hash = md5(data).digest()
                     print '  VALIDATION:', 'OK' if hash == actual_hash else 'FAIL'
+                if args.updatedb:
+                    c.execute('INSERT INTO slab_segment(slab, offset, hash) VALUES (%s, %s, %s)', (slab_name,pos,hash_hex))
                 if args.appraise:
                     compressed_l = len(compress(data))
                     print '  COMPRESS: %d (%.2f%%)' % (compressed_l, 100.0*compressed_l/len(data))
@@ -95,6 +104,8 @@ def operation_index(config, args):
 
     if args.appraise:
         print 'TOTAL COMPRESS: %d (%.2f%%)' % (total-total_cmp, 100.0*total_cmp/total)
+    if args.updatedb:
+        repository_con.commit()
 
 def operation_exhumation_prepare(config, args):
     con = connect(db=config['database'], charset='utf8')
@@ -161,6 +172,7 @@ def main():
     parser.add_argument('--add-dir', help='Add directory', nargs='*', dest='add_dir')
     parser.add_argument('slabs', help='Slabs (index)', nargs='*')
     parser.add_argument('--validate', help='Validate segments (index)', default=False, action='store_true')
+    parser.add_argument('--updatedb', help='Update segments info in db (index)', default=False, action='store_true')
     parser.add_argument('--appraise', help='Appraise segment compression (index)', default=False, action='store_true')
     parser.add_argument('--domain', help='Domain (exhumation_prepare)', nargs='*')
     parser.add_argument('--dedup', help='Deduplication (exhumation_prepare)', choices=['newest', 'longest'])
