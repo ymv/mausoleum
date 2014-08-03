@@ -46,7 +46,7 @@ def make_seg_repository(config):
     seg_repository_con = connect(db=config['database'], charset='utf8')
     with open(config['key']) as f:
         pk = RSA.importKey(f.read())
-    return SegmentRepository(seg_repository_con, config['salt'], pk, config['stage'])
+    return SegmentRepository(seg_repository_con, config['salt'], pk, config['stage'], max_size=config.get('max_slab'))
 
 def operation_scan(config, _):
     seg_repository = make_seg_repository(config)

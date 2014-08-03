@@ -10,7 +10,7 @@ def random_string(l):
         return f.read(l)
 
 class SegmentRepository(object):
-    def __init__(self, connection, salt, pk, stage, use_cache=True):
+    def __init__(self, connection, salt, pk, stage, use_cache=True, max_size=None):
         self._con = connection
         self._stage = stage
         self._salt = salt
@@ -22,6 +22,7 @@ class SegmentRepository(object):
         self._logger.info('Salt: %s, pk: %s, stage: %s', salt, pk, stage)
         self._timer = Timer.getTimer('SegmentRepository')
         self._use_cache = use_cache
+        self._max_size = max_size
         if self._use_cache:
             c = self._con.cursor()
             c.execute('SELECT hash FROM slab_segment')
@@ -45,13 +46,13 @@ class SegmentRepository(object):
         self._slab_name = name
         self._timer.end('open_slab')
 
-    def close_slab(self):
+    def close_slab(self, final=False):
         self._timer.start('close_slab')
-        self._logger.info('Closing slab: %s', self._slab_name)
+        self._logger.info('Closing%s slab: %s', ' and locking' if final else '', self._slab_name)
         self._slab.close()
 
         c = self._con.cursor()
-        c.execute('UPDATE slab SET state = %s WHERE name = %s', ('open', self._slab_name))
+        c.execute('UPDATE slab SET state = %s WHERE name = %s', ('closed' if final else 'open', self._slab_name))
         self._con.commit()
 
         self._slab = None
@@ -73,6 +74,9 @@ class SegmentRepository(object):
         self._con.commit()
         if self._use_cache:
             self._cache.add(digest)
+        if self._max_size and self._slab.tell() > self._max_size:
+            self.close_slab(True)
+            self.open_slab()
         self._timer.end('write_segment')
 
     def segment_exists(self, hash):
