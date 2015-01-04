@@ -16,6 +16,9 @@ class SlabFile(object):
     def tell(self):
         return self._file.tell()
 
+    def seek(self,pos):
+        return self._file.seek(pos)
+
     def close(self):
         return self._file.close()
 
