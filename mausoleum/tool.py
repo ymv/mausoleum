@@ -111,7 +111,7 @@ def operation_exhumation_prepare(config, args):
     con = connect(db=config['database'], charset='utf8')
     c = con.cursor()
     sql = """
-        SELECT f.id, f.domain, f.path, f.state, f.updated, fs.hash
+        SELECT f.id, f.domain, f.path, f.state, f.updated, f.size, fs.hash
         FROM file f
         JOIN file_segment fs ON fs.file_id = f.id
     """
@@ -134,11 +134,11 @@ def operation_exhumation_prepare(config, args):
     out = writer(stdout)
     files = {}
     dedup = {}
-    for i, ((file_id, domain, path, state, updated), subrows) in enumerate(groupby(c, lambda r: r[:-1])):
+    for i, ((file_id, domain, path, state, updated, size), subrows) in enumerate(groupby(c, lambda r: r[:-1])):
         hashes = ' '.join(r[-1] for r in subrows)
         if args.dedup:
             dedup[(domain, path)] = hashes, (i if args.dedup == 'newest' else len(path))
-        files[(domain, path)] = [domain.encode('utf-8'), path.encode('utf-8'), updated, hashes]
+        files[(domain, path)] = [domain.encode('utf-8'), path.encode('utf-8'), updated, size, hashes]
 
     if args.dedup:
         survivors = {}
