@@ -128,7 +128,7 @@ def operation_exhumation_prepare(config, args):
         params.append("active")
     if where:
         sql += '\nWHERE\n' + ' AND\n'.join(where)
-    sql += "\nORDER BY f.domain, f.seen, fs.i"
+    sql += "\nORDER BY f.domain, f.seen, f.id, fs.i"
     c.execute(sql, params)
 
     out = writer(stdout)
