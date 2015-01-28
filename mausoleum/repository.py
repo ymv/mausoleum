@@ -38,10 +38,10 @@ class Repository(object):
     def mark_updated(self, data):
         c = self._con.cursor()
         t = int(time())
-        for name, (timestamp, size, mime, segments) in data.iteritems():
+        for name, (timestamp, size, mime, segments, file_hash) in data.iteritems():
             self._logger.info('Updated file: %s [%s]', name, ','.join(segments))
             c.execute('UPDATE file SET state = %s WHERE domain = %s AND path = %s AND state = %s', ('history', self._domain, name, 'active'))
-            c.execute('INSERT INTO file (domain, path, seen, updated, size, mime, state) VALUES (%s, %s, %s, %s, %s, %s, %s)', (self._domain, name, t, timestamp, size, mime, 'active'))
+            c.execute('INSERT INTO file (domain, path, hash, seen, updated, size, mime, state) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)', (self._domain, name, file_hash, t, timestamp, size, mime, 'active'))
             file_id = c.lastrowid
             for i, hash in enumerate(segments):
                 c.execute('INSERT INTO file_segment(file_id, i, hash) VALUES (%s, %s, %s)', (file_id, i, hash))

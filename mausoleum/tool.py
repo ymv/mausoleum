@@ -32,10 +32,10 @@ def scan_directory(repo, slab_repo, directory):
                 confirmed.add(file_name)
                 seen_ts, seen_size = active.get(file_name, (None, None))
                 if seen_ts != long(stats.st_mtime) or seen_size != long(stats.st_size):
-                    segments = slab_repo.process_file(full_name)
+                    segments, file_hash = slab_repo.process_file(full_name)
                     with open(full_name) as f:
                         mime = m.from_buffer(f.read(2**15))
-                    updated[file_name] = long(stats.st_mtime), long(stats.st_size), mime, segments
+                    updated[file_name] = long(stats.st_mtime), long(stats.st_size), mime, segments, file_hash
     finally:
         slab_repo.close_slab()
     repo.mark_deleted(set(active) - confirmed)

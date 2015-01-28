@@ -93,6 +93,8 @@ class SegmentRepository(object):
         segments = []
         self._logger.debug('Processing file: %s', file_name)
         with open(file_name) as f:
+            file_h = md5()
+            file_h.update(self._salt)
             while True:
                 b = f.read(self._block_size)
                 if not b:
@@ -100,6 +102,7 @@ class SegmentRepository(object):
                 h = md5()
                 h.update(self._salt)
                 h.update(b)
+                file_h.update(b)
                 digest = h.hexdigest()
                 segments.append(digest)
                 if not self.segment_exists(h):
@@ -107,4 +110,4 @@ class SegmentRepository(object):
                     self.write_segment(h, b)
                 else:
                     self._logger.debug('Existing segment: %s', digest)
-        return segments
+        return segments, file_h.hexdigest()
